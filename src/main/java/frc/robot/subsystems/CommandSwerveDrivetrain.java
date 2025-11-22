@@ -18,8 +18,10 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.units.AngleUnit;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -253,6 +255,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 m_hasAppliedOperatorPerspective = true;
             });
         }
+
+        SmartDashboard.putNumber("Heading: ", this.getPigeon2().getYaw().getValue().in(Degrees));
+        SmartDashboard.putNumber("Aiming to: ", new Rotation2d().getDegrees());
+        SmartDashboard.putNumber("Tag Yaw: ", 0);
+        SmartDashboard.putNumber("Last Angle of Read Target: ", lastAngleOfTarget.getDegrees());
     }
 
     private void startSimThread() {
@@ -316,22 +323,37 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return this.camera;
     }
 
+    Rotation2d lastAngleOfTarget = Rotation2d.fromDegrees(180);
+
     public Rotation2d getRotateCam() {
         var results = camera.getAllUnreadResults();
         if (results.isEmpty()) {
-            return new Rotation2d();
+            return lastAngleOfTarget;
         }
         var result = results.get(results.size() - 1);
         if (!result.hasTargets()) {
-            return new Rotation2d();
+            return lastAngleOfTarget;
         }
 
         for (PhotonTrackedTarget target : result.getTargets()) {
-            if (target.getFiducialId() == 16) {
-                return Rotation2d.fromDegrees(-target.getYaw());
+            if (target.getFiducialId() == 13) {
+                Rotation2d robotYaw = this.getState().Pose.getRotation();
+
+                double targetYaw = robotYaw.getDegrees() - target.getYaw();
+
+                targetYaw = ((targetYaw + 180) % 360) - 180;
+
+                Rotation2d toAimAt = Rotation2d.fromDegrees(targetYaw);
+
+                SmartDashboard.putNumber("Aiming to: ", toAimAt.getDegrees());
+                SmartDashboard.putNumber("Tag Yaw: ", target.getYaw());
+
+                lastAngleOfTarget = toAimAt;
+
+                return toAimAt;
             }
         }
 
-        return new Rotation2d();
+        return lastAngleOfTarget;
     }
 }

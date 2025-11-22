@@ -10,6 +10,7 @@ import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -30,6 +31,9 @@ public class RobotContainer {
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
+
+    private final SwerveRequest.FieldCentricFacingAngle aim = new SwerveRequest.FieldCentricFacingAngle()
+            .withHeadingPID(10, 0, 0.3).withRotationalDeadband(0.5);
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
@@ -76,20 +80,19 @@ public class RobotContainer {
         joystick.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
         joystick.x().whileTrue(
-                drivetrain.applyRequest(() -> new SwerveRequest.FieldCentricFacingAngle().withTargetDirection(
-                        drivetrain.getRotateCam()).withHeadingPID(3, 0, 0)
-                        .withVelocityX(-joystick.getLeftY() * MaxSpeed)))
-                .onFalse(
-                        drivetrain.applyRequest(() -> drive.withVelocityX(-joystick.getLeftY() * MaxSpeed) // Drive
-                                                                                                           // forward
-                                                                                                           // with
-                                // negative Y
-                                // (forward)
-                                .withVelocityY(-joystick.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-                                .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise
-                                                                                            // with
-                                                                                            // negative X (left)
-                        ));
+                drivetrain.applyRequest(() -> {
+                    Rotation2d target = drivetrain.getRotateCam();
+
+                    SmartDashboard.putNumber("AimingTo: ", target.getDegrees());
+
+                    return aim
+                            .withVelocityX(-joystick.getLeftY() * MaxSpeed)
+                            .withVelocityY(-joystick.getLeftX() * MaxSpeed)
+                            .withTargetDirection(target);
+                })).onFalse(
+                        drivetrain.applyRequest(() -> drive.withVelocityX(-joystick.getLeftY() * MaxSpeed)
+                                .withVelocityY(-joystick.getLeftX() * MaxSpeed)
+                                .withRotationalRate(-joystick.getRightX() * MaxAngularRate)));
 
         drivetrain.registerTelemetry(logger::telemeterize);
     }
