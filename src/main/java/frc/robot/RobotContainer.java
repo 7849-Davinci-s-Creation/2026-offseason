@@ -100,8 +100,9 @@ public class RobotContainer {
                     SmartDashboard.putNumber("AimingTo: ", target.getDegrees());
 
                     return aim
-                            .withVelocityX(-joystick.getLeftY() * Constants.DriveTrain.MAX_SPEED)
-                            .withVelocityY(-joystick.getLeftX() * Constants.DriveTrain.MAX_SPEED)
+                            .withVelocityX(Math.abs(joystick.getLeftY()) > 0.1 ? -joystick.getLeftY() * Constants.DriveTrain.MAX_SPEED : 0)
+                            .withVelocityY(Math.abs(joystick.getLeftX()) > 0. ? -joystick.getLeftX() * Constants.DriveTrain.MAX_SPEED : 0)
+                            .withRotationalDeadband(0.5)
                             .withTargetDirection(target);
                 })).onFalse(
                         drivetrain.applyRequest(() -> drive.withVelocityX(-joystick.getLeftY() * Constants.DriveTrain.MAX_SPEED)
